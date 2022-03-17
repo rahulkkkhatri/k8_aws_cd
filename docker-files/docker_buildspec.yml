@@ -1,0 +1,39 @@
+version: 0.2
+
+
+phases:
+  pre_build:
+    commands:
+      - apt-get update -y
+      - apt-get install awscli -y
+      - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
+  build:
+    commands:
+      - ls target/
+      # building and pushing image for app
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - REPOSITORY_URI=329588343028.dkr.ecr.us-east-1.amazonaws.com/profileapp_app
+      - echo Building the Docker image...
+      - aws s3 cp s3://vprofile-artifact-release/$(aws s3 ls s3://vprofile-artifact-release/pipeline-artifact/ --recursive | sort | tail -n 1 | awk '{print $4}') docker-files/app/profile.war
+      - docker build -t $REPOSITORY_URI:latest docker-files/app/.
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+
+      # Building and pushing image for db
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - REPOSITORY_URI=329588343028.dkr.ecr.us-east-1.amazonaws.com/profileapp_db
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest docker-files/db/.
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      
+
+  

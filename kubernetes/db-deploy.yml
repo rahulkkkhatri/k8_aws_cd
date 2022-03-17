@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: profile-db
+  labels:
+    app: profile-db
+spec:
+  selector:
+    matchLabels:
+      app: profile-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: profile-db
+    spec:
+      containers:
+      - name: prodb
+        image: 329588343028.dkr.ecr.us-east-1.amazonaws.com/profileapp_db:latest
+        args:
+         - "--ignore-db-dir=lost+found"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: profile-db-data
+        ports:
+        - containerPort: 3306
+        env:
+         - name: MYSQL_ROOT_PASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: app-secret
+               key: db-pass
+      nodeSelector:
+        zone: us-east-1a
+      volumes:
+        - name: profile-db-data
+          # This AWS EBS volume must already exist.
+          awsElasticBlockStore:
+             volumeID: vol-065eab91bee26a7a8
+             fsType: ext4
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-db
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+    protocol: TCP
+  selector:
+    app: profile-db
+  type: ClusterIP
+

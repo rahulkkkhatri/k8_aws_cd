@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: profile-mq
+  labels:
+    app: profile-mq
+spec:
+  selector:
+    matchLabels:
+      app: profile-mq
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: profile-mq
+    spec:
+      containers:
+      - name: promq
+        image: rabbitmq
+        ports:
+        - containerPort: 15672
+        env: 
+         - name: RABBITMQ_DEFAULT_PASS
+           valueFrom:
+             secretKeyRef:
+               name: app-secret
+               key: rmq-pass
+         - name: RABBITMQ_DEFAULT_USER
+           value: "guest"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-mq
+spec:
+  ports:
+  - port: 15672
+    targetPort: 15672
+    protocol: TCP
+  selector:
+    app: profile-mq
+  type: ClusterIP
+

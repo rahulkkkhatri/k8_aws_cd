@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: profile-app
+  labels: 
+    app: profile-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: profile-app
+  template:
+    metadata:
+      labels:
+        app: profile-app
+    spec:
+      containers:
+      - name: proapp
+        image: 329588343028.dkr.ecr.us-east-1.amazonaws.com/profileapp_app:latest 
+        ports:
+        - containerPort: 8080
+      initContainers:
+      - name: init-mydb
+        image: busybox
+        command: ['sh', '-c', 'until nslookup profile-db; do echo waiting for mydb; sleep 2; done;']
+      - name: init-memcache
+        image: busybox
+        command: ['sh', '-c', 'until nslookup profile-mc; do echo waiting for mydb; sleep 2; done;']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-app
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: profile-app
+  type: LoadBalancer
